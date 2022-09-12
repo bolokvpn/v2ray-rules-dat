@@ -179,18 +179,48 @@ jobs:
           cd custom || exit 1
           go run ./ --datapath=../community/data
 
+      - name: Checkout CHIZI-0618/sing-geosite
+        uses: actions/checkout@v3
+        with:
+          repository: CHIZI-0618/sing-geosite
+          path: sing-geosite
+
+      - name: Build geosite.db file
+        run: |
+          cd sing-geosite || exit 1
+          cp ../custom/publish/geosite.dat ./
+          go run -v .
+
+      - name: Checkout SagerNet/sing-geoip
+        uses: actions/checkout@v3
+        with:
+          repository: SagerNet/sing-geoip
+          path: sing-geoip
+
+      - name: Build geoip.db file
+        env:
+          NO_SKIP: true
+        run: |
+          cd sing-geoip || exit 1
+          sed -i 's/Dreamacro\/maxmind-geoip/Loyalsoldier\/geoip/g' main.go
+          go run -v .
+
       - name: Move and zip files and generate sha256 hash
         run: |
           install -Dp ./geoip.dat ./publish/geoip.dat
           install -Dp ./geoip.dat.sha256sum ./publish/geoip.dat.sha256sum
           install -Dp ./custom/publish/geosite.dat ./publish/geosite.dat
+          install -Dp ./sing-geosite/geosite-custom.db ./publish/geosite.db
+          install -Dp ./sing-geoip/geoip.db ./publish/geoip.db
           install -p {proxy,direct,reject}-tld-list.txt ./publish/
           install -p {proxy,direct,reject}-list.txt ./publish/
           install -p hosts ./publish/
           install -p {apple-cn,google-cn,gfw,greatfire,win-spy,win-update,win-extra}.txt ./publish/
           cd ./publish || exit 1
-          zip rules.zip {proxy,direct,reject}-list.txt geoip.dat geosite.dat
+          zip rules.zip {proxy,direct,reject}-list.txt geoip.dat geosite.dat geosite.db geoip.db
           sha256sum geosite.dat > geosite.dat.sha256sum
+          sha256sum geosite.db > geosite.db.sha256sum
+          sha256sum geoip.db > geoip.db.sha256sum
           sha256sum rules.zip > rules.zip.sha256sum
 
       - name: Release and upload assets
